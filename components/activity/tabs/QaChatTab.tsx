@@ -11,6 +11,7 @@ import type { Equipment, Severity } from "@/lib/mission";
 import type { ConversationState } from "@/lib/session-store";
 import type { ExpertMode } from "@/lib/expert/create-connection";
 import { ExpertPanel } from "@/components/activity/ExpertPanel";
+import { TechnicianFeed } from "@/components/activity/TechnicianFeed";
 import { Button } from "@/components/ui/Button";
 
 export default function QaChatTab({
@@ -39,14 +40,17 @@ export default function QaChatTab({
         The expert has reviewed your recording. Answer their final questions
         to close out the job.
       </p>
-      <ExpertPanel
-        mode={mode}
-        phase="qa"
-        equipment={equipment}
-        severity={severity}
-        initial={initial}
-        onDone={setChatDone}
-      />
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+        <TechnicianFeed caption="Recording submitted. The expert reviews it while you close out the job." />
+        <ExpertPanel
+          mode={mode}
+          phase="qa"
+          equipment={equipment}
+          severity={severity}
+          initial={initial}
+          onDone={setChatDone}
+        />
+      </div>
       <div className="flex justify-end">
         <Button
           type="button"

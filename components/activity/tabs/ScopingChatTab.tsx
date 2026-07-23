@@ -12,6 +12,7 @@ import type { Equipment, Severity } from "@/lib/mission";
 import type { ConversationState } from "@/lib/session-store";
 import type { ExpertMode } from "@/lib/expert/create-connection";
 import { ExpertPanel } from "@/components/activity/ExpertPanel";
+import { TechnicianFeed } from "@/components/activity/TechnicianFeed";
 import { Button } from "@/components/ui/Button";
 
 export default function ScopingChatTab({
@@ -45,14 +46,17 @@ export default function ScopingChatTab({
         Describe the situation to the remote expert. They&apos;ll scope the
         problem before you start recording.
       </p>
-      <ExpertPanel
-        mode={mode}
-        phase="scoping"
-        equipment={equipment}
-        severity={severity}
-        initial={initial}
-        onDone={setChatDone}
-      />
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+        <TechnicianFeed caption="Your webcam feed is captured in the Recording step. Scope the problem with the expert first." />
+        <ExpertPanel
+          mode={mode}
+          phase="scoping"
+          equipment={equipment}
+          severity={severity}
+          initial={initial}
+          onDone={setChatDone}
+        />
+      </div>
       <div className="flex justify-end">
         {alreadyCompleted ? (
           <Button type="button" variant="secondary" onClick={onAdvance}>

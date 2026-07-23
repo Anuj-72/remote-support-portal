@@ -77,46 +77,89 @@ export default function RecordingTab({
         The video stays on this device — only a completion flag is saved.
       </p>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-black dark:border-slate-700">
-        {status === "previewing" && previewUrl ? (
-          <video src={previewUrl} controls playsInline className="aspect-video w-full" />
-        ) : status === "processing" ? (
-          <div className="flex aspect-video w-full items-center justify-center bg-slate-900">
-            <div className="flex flex-col items-center gap-3">
-              <Skeleton className="h-4 w-40" />
-              <p className="text-xs text-slate-400">Processing recording…</p>
-            </div>
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-3">
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-black dark:border-slate-700">
+            {status === "previewing" && previewUrl ? (
+              <video src={previewUrl} controls playsInline className="aspect-video w-full" />
+            ) : status === "processing" ? (
+              <div className="flex aspect-video w-full items-center justify-center bg-slate-900">
+                <div className="flex flex-col items-center gap-3">
+                  <Skeleton className="h-4 w-40" />
+                  <p className="text-xs text-slate-400">Processing recording…</p>
+                </div>
+              </div>
+            ) : streamState.status === "active" ? (
+              <video ref={liveVideoRef} autoPlay muted playsInline className="aspect-video w-full" />
+            ) : (
+              <div className="flex aspect-video w-full items-center justify-center">
+                <p className="px-6 text-center text-sm text-slate-400">
+                  {streamState.status === "requesting"
+                    ? "Requesting camera…"
+                    : recordedFlag
+                      ? "Recording already completed. You can re-record or continue."
+                      : "Camera preview will appear here."}
+                </p>
+              </div>
+            )}
           </div>
-        ) : streamState.status === "active" ? (
-          <video ref={liveVideoRef} autoPlay muted playsInline className="aspect-video w-full" />
-        ) : (
-          <div className="flex aspect-video w-full items-center justify-center">
-            <p className="px-6 text-center text-sm text-slate-400">
-              {streamState.status === "requesting"
-                ? "Requesting camera…"
-                : recordedFlag
-                  ? "Recording already completed. You can re-record or continue."
-                  : "Camera preview will appear here."}
-            </p>
-          </div>
-        )}
-      </div>
 
-      {streamState.status === "denied" && (
-        <div role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/30 dark:text-amber-100">
-          {streamState.reason}
+          {streamState.status === "denied" && (
+            <div role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900/30 dark:text-amber-100">
+              {streamState.reason}
+            </div>
+          )}
+          {streamState.status === "unsupported" && (
+            <p role="alert" className="text-sm text-amber-700 dark:text-amber-300">
+              This browser cannot record video. You may continue without a recording.
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+              {error}
+            </p>
+          )}
         </div>
-      )}
-      {streamState.status === "unsupported" && (
-        <p role="alert" className="text-sm text-amber-700 dark:text-amber-300">
-          This browser cannot record video. You may continue without a recording.
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
-      )}
+
+        {/* Right panel: persistent "Remote Expert" region, mirroring the
+            split-screen mockup. In this tab the expert is passively watching
+            the recording rather than chatting. */}
+        <div className="flex flex-col rounded-xl border border-slate-200">
+          <div className="border-b border-slate-200 px-4 py-2 text-sm font-medium text-slate-700">
+            Remote Expert
+          </div>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+            {status === "recording" ? (
+              <>
+                <span className="h-3 w-3 animate-pulse rounded-full bg-red-500" aria-hidden="true" />
+                <p className="text-sm font-semibold text-slate-800">Live Feed Active</p>
+                <p className="text-xs text-slate-500">
+                  Camera and microphone are streaming to the Remote Expert.
+                </p>
+                <p className="text-xs italic text-slate-400">Listening for repair narrative…</p>
+              </>
+            ) : status === "previewing" ? (
+              <>
+                <span className="text-2xl" aria-hidden="true">✓</span>
+                <p className="text-sm font-semibold text-slate-800">Recording captured</p>
+                <p className="text-xs text-slate-500">
+                  Review the clip, then continue to Expert QA for the final review.
+                </p>
+              </>
+            ) : status === "processing" ? (
+              <p className="text-xs text-slate-500">Preparing your recording for review…</p>
+            ) : (
+              <>
+                <span className="h-3 w-3 rounded-full bg-slate-300" aria-hidden="true" />
+                <p className="text-sm font-semibold text-slate-800">Expert standing by</p>
+                <p className="text-xs text-slate-500">
+                  Start recording to stream your repair to the remote expert.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2">

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Force a light theme app-wide. The `dark:` variant is remapped to a
+ * `.dark` ancestor selector (never added), so every existing dark: utility
+ * becomes inert instead of us editing each component. Re-enable dark mode
+ * later by adding `class="dark"` on <html> — no component changes needed. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -12,15 +18,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b1120;
-    --foreground: #e2e8f0;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
+  color-scheme: light;
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
