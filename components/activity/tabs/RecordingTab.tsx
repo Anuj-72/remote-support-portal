@@ -11,6 +11,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { completeTab } from "@/actions/mission";
 import { useMediaStream } from "@/hooks/useMediaStream";
 import { useMediaRecorder } from "@/hooks/useMediaRecorder";
+import { usePageHideCleanup } from "@/hooks/usePageHideCleanup";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -26,6 +27,15 @@ export default function RecordingTab({
   const { state: streamState, start: startStream, stop: stopStream } = useMediaStream();
   const { status, previewUrl, error, start: startRecorder, stop: stopRecorder, reset } =
     useMediaRecorder();
+
+  // Terminal teardown (tab/window close): React's effect cleanup does NOT run
+  // on tab close. Finalize an in-progress recording FIRST, then release the
+  // camera. Deliberately terminal-only — merely hiding the tab must not stop
+  // a recording (it would silently corrupt the deliverable mid-capture).
+  usePageHideCleanup(() => {
+    stopRecorder();
+    stopStream();
+  });
   const [recordedFlag, setRecordedFlag] = useState(wasRecorded);
   const [isPending, startTransition] = useTransition();
   const liveVideoRef = useRef<HTMLVideoElement>(null);

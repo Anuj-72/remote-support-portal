@@ -7,6 +7,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePageHideCleanup } from "./usePageHideCleanup";
 
 export function useSpeechSynthesis() {
   const [muted, setMuted] = useState(true); // opt-in: browsers dislike auto-audio
@@ -39,6 +40,11 @@ export function useSpeechSynthesis() {
       if (supported) window.speechSynthesis.cancel();
     };
   }, [supported]);
+
+  // Tab close / hide: no lingering audio after the page is gone or hidden.
+  usePageHideCleanup(() => {
+    if (supported) window.speechSynthesis.cancel();
+  }, { onHidden: true });
 
   return { supported, muted, toggleMuted, speak };
 }

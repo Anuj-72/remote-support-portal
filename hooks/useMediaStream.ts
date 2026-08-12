@@ -55,5 +55,8 @@ export function useMediaStream() {
     };
   }, []);
 
+  // NOTE: no per-hook terminal cleanup here on purpose — the recording tab
+  // orchestrates pagehide teardown (finalize recorder, then release tracks).
+
   return { state, start, stop };
 }

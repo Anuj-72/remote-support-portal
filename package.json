@@ -2,11 +2,13 @@
   "name": "support-portal",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test tests/credits.test.ts"
   },
   "dependencies": {
     "@ai-sdk/groq": "^4.0.13",

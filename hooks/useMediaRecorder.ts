@@ -108,5 +108,9 @@ export function useMediaRecorder() {
     };
   }, []);
 
+  // NOTE: no per-hook terminal cleanup here on purpose — the recording tab
+  // orchestrates pagehide teardown (finalize recorder, then release tracks)
+  // so a merely-hidden tab can never silently stop a recording in progress.
+
   return { status, previewUrl, error, start, stop, reset };
 }

@@ -23,6 +23,7 @@ import type { ExpertMode } from "@/lib/expert/create-connection";
 import { TabBar } from "./TabBar";
 import { MissionTimer } from "./MissionTimer";
 import { TabSkeleton } from "./TabSkeleton";
+import { LeavingGuard } from "./LeavingGuard";
 
 const ScopingChatTab = dynamic(() => import("./tabs/ScopingChatTab"), {
   loading: () => <TabSkeleton />,
@@ -83,9 +84,12 @@ export function ActivityShell({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <TabBar activeTab={activeTab} unlockedTab={unlockedTab} onSelect={setActiveTab} />
-        <MissionTimer sid={mission.sid} totalSeconds={MISSION_SECONDS} onExpire={handleExpire} />
+        <div className="flex items-center gap-2">
+          <LeavingGuard />
+          <MissionTimer sid={mission.sid} totalSeconds={MISSION_SECONDS} onExpire={handleExpire} />
+        </div>
       </div>
 
       {expired ? (
