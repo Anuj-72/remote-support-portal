@@ -21,6 +21,8 @@ GROQ_API_KEY=gsk_...
 
 With a key present the expert chats are answered by an LLM (streamed); without one — or if the LLM call fails mid-conversation — the app falls back to the scripted expert automatically.
 
+Every new visitor is seeded with **300 credits** (override with `DEMO_USER_BALANCE`). Each mission costs **100 credits**, charged the moment it starts — see [Credits & billing](#credits--billing--the-paid-mission).
+
 > `npm run build && npm start` also works. Note the file-backed session store writes to `.data/` and therefore needs a writable filesystem (see [Persistence](#two-tier-state-where-things-are-saved-and-when)).
 
 ## Why no separate backend
@@ -29,6 +31,7 @@ The assignment's scope is UI orchestration plus thin persistence — a separate 
 
 - `lib/session-store.ts` — four functions over `.data/sessions/<sid>.json`; swap the implementations for Redis/Postgres and no caller changes.
 - `lib/expert/types.ts` (`ExpertConnection`) — the chat UI talks to this interface only; a real WebSocket backend is a third implementation beside the mock and LLM channels.
+- `lib/credits-store.ts` — the billing ledger (balance, idempotent charge refs, active mission); synchronous-fs for dev-only per-process atomicity, single-statement `UPDATE ... WHERE balance >= amount` + a `UNIQUE (uid, ref)` charge row in production.
 
 ## Server / Client component map
 
@@ -74,9 +77,22 @@ The rule applied throughout: **the server decides, the client animates.** Pages 
 ## Route & tab protection
 
 - **`proxy.ts`** (Next 16's middleware) maps `/prep → configured`, `/activity → prepped`, `/analysis → finished` as **minimum** stages, compared ordinally (`STAGE_ORDER.indexOf(stage) >= indexOf(required)`) — never equality, so refreshing `/activity` at a later stage doesn't bounce. Insufficient or malformed cookie → redirect `/` before any page code runs.
+- The proxy also **mints the `user` identity cookie** (httpOnly) — unconditionally, *first* in the handler, before the stage lookup (Server Components can't set cookies, and `/` must render a balance on a first visit with no mission). The cookie is written to both the forwarded request and the response, and the same pass-through `NextResponse` is returned on every continue branch so it is never dropped.
 - **Pages re-check the cookie** (`redirect('/')`) as defense-in-depth behind the proxy.
 - **Tabs are client state, but unlock server-side:** `/activity`'s Server Component derives `unlockedTab` from the cookie and passes it down. `TabBar` renders locked tabs disabled; the only unlock path is the `completeTab` action, whose `revalidatePath` refreshes `unlockedTab` in the same round trip. A user can flip `activeTab` in React DevTools all day — the tabs beyond `unlockedTab` were never given any authorized state.
 - **Cookie honesty note:** the cookie is plain JSON, deliberately. httpOnly already blocks script access; the remaining "attack" is a technician hand-editing their own cookie in devtools to skip stages of a demo app — no stakes. In production I would HMAC-sign (or JWT) the value to prevent client-side stage tampering; `lib/mission.ts`'s `parseMission`/`serializeMission` are the single seam where verification slots in.
+
+## Credits & billing — the paid mission
+
+- **Charge at start, never refunded.** `startMission` (the Phase 1 Server Action) deducts 100 credits atomically and idempotently — keyed by the mission `sid` — from `lib/credits-store.ts`. Leaving at any point still costs the mission; there is no refund path, by design.
+- **Identity.** A `user` cookie (httpOnly) is minted once per browser by the proxy; the ledger is keyed by `uid`. Every page/action/route reads it; none mints it.
+- **One paid mission at a time.** Two guards: the mission cookie (fast UX check) and `account.activeMission` — checked *inside the same synchronous write as the charge*, so two racing starts (double-click, action retry, two tabs) cannot both charge. A stale `activeMission` (an abandoned mission whose cookie has lapsed) self-heals on the next start.
+- **The LLM route is a paid resource.** `POST /api/expert/chat` derives identity from cookies only and requires `account.activeMission.sid` to match the mission cookie — curl, devtools, and expired-session calls get 401, so there is no free-inference abuse. The stream also carries `abortSignal: request.signal`, so a client disconnect cancels the provider call immediately.
+- **The warning is UX, not enforcement.** `beforeunload` shows only a generic browser dialog and is unreliable on mobile; the real copy lives in the in-app "Leave mission" modal. Either way the charge already happened server-side.
+
+## Resource lifecycle on exit (tab close)
+
+React's effect cleanup does **not** run when a tab is closed — the component is destroyed, never unmounted. `usePageHideCleanup` registers `pagehide` (+ `visibilitychange` where it's safe — e.g. cancelling speech) so every resource is released on teardown: the in-flight LLM fetch is aborted (which also cancels the server-side stream via `request.signal`), `speechSynthesis` is cancelled, and on tab close the recorder is finalized and camera/mic tracks are released. Two resources are deliberately **terminal-only** (real page teardown, not tab-hide): the expert chat — switching tabs must not kill an in-progress conversation — and the video recording — a hidden tab must not silently corrupt a recording mid-capture. This is the deliberate answer to "what happens to the resources you provide the user": each one is owned by a lifecycle that ends on unmount, `pagehide`, or the server request itself — nothing outlives its owner.
 
 ## The simulated expert connection
 
@@ -111,5 +127,6 @@ Permission failure is a first-class path: `/prep` probes access on explicit clic
 - `.data/` store is local-dev only (read-only fs on serverless) — interface swap documented above.
 - Video blob not persisted across refresh — flag only, by design.
 - `getUserMedia` requires localhost or HTTPS.
-- One mission per browser (cookie-scoped); no multi-user accounts — out of scope.
-- The plain-JSON cookie is tamperable by its owner; production hardening is a one-line HMAC away at the documented seam.
+- One paid mission at a time per user (account-scoped); no multi-user accounts — out of scope.
+- The plain-JSON `mission` and `user` cookies are tamperable by their owner; production hardening is a one-line HMAC away at the documented seam (`parseMission`/`serializeMission`, `parseUser`/`serializeUser`).
+- The credits ledger is file-backed (dev-only) with per-process atomicity via synchronous fs; the production swap is a single-statement DB transaction (see Credits & billing).

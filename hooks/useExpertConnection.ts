@@ -17,6 +17,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePageHideCleanup } from "./usePageHideCleanup";
 import type { ChatMessage, ConversationCursor, ConversationState } from "@/lib/session-store";
 import type { ConnectionStatus, ExpertConnection, ExpertPhase } from "@/lib/expert/types";
 import { createConnection, type ExpertMode } from "@/lib/expert/create-connection";
@@ -51,6 +52,12 @@ export function useExpertConnection({
     initial?.cursor ?? { stepIndex: 0, awaiting: "expert" },
   );
   const transcriptRef = useRef<ChatMessage[]>(transcript);
+
+  // Terminal cleanup: React's effect cleanup does NOT run on tab close.
+  // Disconnect the channel so the in-flight LLM fetch is aborted and mock
+  // timers are cleared. Terminal-only (no `onHidden`): switching tabs must
+  // not kill an in-progress conversation.
+  usePageHideCleanup(() => connectionRef.current?.disconnect());
 
   /** Fire-and-forget autosave of {transcript, cursor} for this phase. */
   const save = useCallback(() => {
